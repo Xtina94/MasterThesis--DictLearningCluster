@@ -1,0 +1,1 @@
+Here I imposed the smoothness constraint only on the first kernel, while all the rest was being learned as in Dorina's algo

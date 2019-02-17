@@ -1,0 +1,1 @@
+Here I imposed that only the FIRST kernel were smooth, while the other ones behave like high freq kernels

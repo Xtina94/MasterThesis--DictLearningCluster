@@ -1,0 +1,1 @@
+Here I simulated the classic algo imposing that the even kernels are high frequency, while the odd ones are low frequency

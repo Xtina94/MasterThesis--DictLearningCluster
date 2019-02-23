@@ -5,7 +5,7 @@ function [ learned_dictionary, param ] = construct_dict( param )
     end
 
     for i=1:param.S
-        learned_dict{i} = zeros(param.N);
+        learned_dict{i} = zeros(size(param.Laplacian,1));
     end
 
     for k = 1 : max(param.K)+1

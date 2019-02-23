@@ -46,7 +46,7 @@ end
 %%  Graph Dictionary Learning Algorithm
 %%----------------------------------------------------
 
-cpuTime = zeros(1,param.numIteration);
+cpuTime = zeros(param.numIteration,1);
 g_ker = zeros(N, param.S);
         
 for iterNum = 1 : param.numIteration
@@ -64,7 +64,7 @@ for iterNum = 1 : param.numIteration
             disp('solving the quadratic problem with YALMIP...')
         end
         [alpha, cpuTm, param] = coefficient_update_interior_point(Y,CoefMatrix,param,'sdpt3',g_ker,p);
-        cpuTime(iterNum) = cpuTm;
+        cpuTime(iterNum,:) = cpuTm;
     else
         if (iterNum == 1)
             disp('solving the quadratic problem with ADMM...')

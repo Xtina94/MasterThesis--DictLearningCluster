@@ -7,7 +7,7 @@ addpath('C:\Users\cryga\Documents\GitHub\DictLearningCluster\DataSets\Comparison
 addpath('C:\Users\cryga\Documents\GitHub\DictLearningCluster\DataSets\'); %Folder containing the training and verification dataset
 
 %% Loading the required dataset
-flag = 1;
+flag = 5;
 switch flag
     case 1
         load ComparisonDorina.mat
@@ -88,7 +88,7 @@ param.K = degree*ones(1,param.S);
 param.T0 = 4; % sparsity level in the training phase
 param.c = 1; % spectral control parameters
 param.mu = 1e-2; % polynomial regularizer paremeter
-path = ['C:\Users\cryga\Documents\GitHub\DictLearningCluster\DictionaryLearning\Constraints\Results\23.02.2019\',num2str(ds_name),'\']; %Folder containing the results to save
+path = ['C:\Users\cryga\Documents\GitHub\DictLearningCluster\DictionaryLearning\Constraints\Results\28.02.2019\',num2str(ds_name),'\']; %Folder containing the results to save
 
 for trial = 1:1
     %% Initialize the kernel coefficients
@@ -130,7 +130,7 @@ for trial = 1:1
     param.Laplacian = (diag(sum(W,2)))^(-1/2)*L*(diag(sum(W,2)))^(-1/2); % normalized Laplacian
     
     %% Find the two communities separation through fiedler's eigenvector
-    [param, W, TrainSignal_comm, TestSignal_comm] = comm_det(param, W, TrainSignal, TestSignal,P);
+    [param, W, TrainSignal_comm, TestSignal_comm, idx] = comm_det_kmn(param, W, TrainSignal, TestSignal,P);
     
     %% Compute the powers of the Laplacian
     
@@ -218,19 +218,21 @@ for trial = 1:1
         eval(sprintf('avgCPU%d = mean(output_Pol%d.cpuTime);',p,p));
         eval(sprintf('avgCPU(:,p) = avgCPU%d;',p));
     end
-    avgCPU = mean(avgCPU,2);
+    avgCPU = mean(mean(avgCPU,2));
     
     %% Save the results to file
-    % The Output data
-    learned_alpha = zeros(degree+1,param.S);
-    for i = 1:param.S
-        learned_alpha(:,i) = param.alpha{i};
+    for p = 1:P
+        % The Output data
+        learned_alpha = zeros(degree+1,param.S);
+        for i = 1:param.S
+            learned_alpha(:,i) = param.alpha{i};
+        end
+        eval(sprintf('alpha%d = output_Pol%d.alpha;',p,p));
+        name = sprintf('Output%d.mat', p);
+        filename = strcat(path,'\',name);
+        var1 = sprintf('avgCPU%d',p); var2 = sprintf('alpha%d',p); var3 = sprintf('errorTesting_Pol%d',p);
+        save(filename,'ds','learned_alpha','errorTesting_Pol','avgCPU',var1,var2,var3);
     end
-    eval(sprintf('alpha%d = output_Pol%d.alpha;',p,p));
-    name = sprintf('Output%d.mat', p);
-    filename = strcat(path,'\',name);
-    var1 = sprintf('avgCPU%d',p); var2 = sprintf('alpha%d',p); var3 = sprintf('errorTesting_Pol%d',p);
-    save(filename,'ds','learned_alpha','errorTesting_Pol','avgCPU',var1,var2,var3);
 end
 % The kernels plot
 for p = 1:P

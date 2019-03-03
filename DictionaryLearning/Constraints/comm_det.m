@@ -1,4 +1,16 @@
 function [param, W_comm, TrainSignal, TestSignal] = comm_det(param, W, TRS, TTS,P)
+    %%%%%%%%%%% BE CAREFUL: this method is different from the one in
+    %%%%%%%%%%% graph leraning! %%%%%%%%%%
+    %%%%%%%%
+    % Parameters:
+    % TRS = original Trainsignal
+    % TTS = original TestSignal
+    % Trainsignal = The subspace of the train signal composed by only the vertices belonging to
+    % the cluster we found
+    % TestSignal = The subspace of the test signal composed by only the vertices belonging to
+    % the cluster we found
+    %%%%%%%%
+    
     % extract eigenvectors
     N = param.N;
     d = full(sum(W));
@@ -28,7 +40,7 @@ function [param, W_comm, TrainSignal, TestSignal] = comm_det(param, W, TRS, TTS,
     end
     
     % Plot the data with coordinates in X
-    if P >= 3
+    if P == 3
         figure('Name','The spectral clusters')
         scatter3(X(1,1),X(1,2),X(1,3),'.');
         hold on
@@ -38,7 +50,7 @@ function [param, W_comm, TrainSignal, TestSignal] = comm_det(param, W, TRS, TTS,
         hold off
     end
     
-    cl = 2;
+    cl = 3;
     switch cl
         case 1
             %% Clustering algorithm: PageRank-Nibble approach
@@ -92,6 +104,59 @@ function [param, W_comm, TrainSignal, TestSignal] = comm_det(param, W, TRS, TTS,
                 exp4 = sprintf('[param.lambda_sym%d, index_sym%d] = sort(diag(param.eigenVal%d));', p,p,p);
                 eval(exp1); eval(exp2); eval(exp3); eval(exp4);
                 eval(sprintf('param.myPercentage{%d} = ceil(csize/2);', p));
+            end
+        case 3
+            %% Clustering algorithm: Fiedler's eigenvector
+            % extract eigenvectors
+            Di = spdiags(1./sqrt(d'),0,N,N);
+            [V,DD] = eigs(param.Laplacian,2,'SA'); % find the 2 smallest eigenvalues and corresponding eigenvectors
+            Vv = Di*V; % realign eigenvectors
+            v1 = Vv(:,2)/norm(Vv(:,2)); % Fiedler's vector
+            % Separate into two communities
+            % sweep wrt the ordering identified by v1
+            % reorder the adjacency matrix
+            [v1s,pos] = sort(v1);
+            sortW = W(pos,pos);
+            
+            % evaluate the conductance measure
+            a = sum(triu(sortW));
+            b = sum(tril(sortW));
+            d = a+b;
+            D = sum(d);
+            assoc = cumsum(d);
+            assoc = min(assoc,D-assoc);
+            cut = cumsum(b-a);
+            conduct = cut./assoc;
+            conduct = conduct(1:end-1);
+            % show the conductance measure
+            figure('Name','Conductance')
+            plot(conduct,'x-')
+            grid
+            title('conductance')
+            
+            % identify the minimum -> threshold
+            [~,mpos] = min(conduct);
+            threshold = mean(v1s(mpos:mpos+1));
+            disp(['Minimum conductance: ' num2str(conduct(mpos))]);
+            disp(['   Cheeger''s upper bound: ' num2str(sqrt(2*DD(2,2)))]);
+            disp(['   # of links: ' num2str(D/2)]);
+            disp(['   Cut value: ' num2str(cut(mpos))]);
+            disp(['   Assoc value: ' num2str(assoc(mpos))]);
+            disp(['   Community size #1: ' num2str(mpos)]);
+            disp(['   Community size #2: ' num2str(N-mpos)]);
+            param.mpos = mpos;
+            param.tpos{1} = pos(1:param.mpos);
+            param.tpos{2} = pos(param.mpos+1:end);
+            for p = 1:P
+                eval(sprintf('param.myPercentage{%d} = ceil(length(param.tpos{%d})/2);', p,p));
+                eval(sprintf('W_comm{%d} = W(param.tpos{%d},param.tpos{%d});',p,p,p));
+                % Construct the two subLaplacians
+                eval(sprintf('TrainSignal{%d} = TRS(param.tpos{%d},:);', p,p));
+                eval(sprintf('TestSignal{%d} = TTS(param.tpos{%d},:);',p,p));
+                eval(sprintf('param.L = diag(sum(W_comm{%d},2)) - W_comm{%d};',p,p)); % combinatorial Laplacian
+                eval(sprintf('param.Laplacian%d = (diag(sum(W_comm{%d},2)))^(-1/2)*param.L*(diag(sum(W_comm{%d},2)))^(-1/2);',p,p,p)); % normalized Laplacian
+                eval(sprintf('[param.eigenMat%d, param.eigenVal%d] = eig(param.Laplacian%d);',p,p,p)); % eigendecomposition of the normalized Laplacian
+                eval(sprintf('[param.lambda_sym%d,index_sym%d] = sort(diag(param.eigenVal%d));',p,p,p)); % sort the eigenvalues of the normalized Laplacian in descending order
             end
     end
 end
